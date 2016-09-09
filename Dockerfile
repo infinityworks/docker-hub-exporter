@@ -2,7 +2,7 @@ FROM python:3.5-alpine
 
 RUN pip install prometheus_client requests
 
-ENV BIND_PORT 1234
+ENV BIND_PORT 9170
 ENV IMAGES "prom/prometheus, prom/node-exporter"
 
 ADD . /usr/src/app
