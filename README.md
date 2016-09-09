@@ -38,13 +38,13 @@ Metrics will be made available on port 1234 by default
 
 ```
 # HELP docker_hub_pull_count counter of docker_pulls from the public API
-# TYPE docker_hub_pull_count counter
-docker_hub_pull_count{image="prometheus",user="prom"} 5360660.0
-docker_hub_pull_count{image="node-exporter",user="prom"} 9668841.0
-# HELP docker_hub_star_count counter of docker_stars from the public API
-# TYPE docker_hub_star_count counter
-docker_hub_star_count{image="prometheus",user="prom"} 133.0
-docker_hub_star_count{image="node-exporter",user="prom"} 16.0
+# TYPE docker_hub_pull_total counter
+docker_hub_pull_total{image="prometheus",user="prom"} 5360660.0
+docker_hub_pull_total{image="node-exporter",user="prom"} 9668841.0
+# HELP docker_hub_star_total counter of docker_stars from the public API
+# TYPE docker_hub_star_total counter
+docker_hub_star_total{image="prometheus",user="prom"} 133.0
+docker_hub_star_total{image="node-exporter",user="prom"} 16.0
 ```
 
 ## Metadata
