@@ -1,5 +1,5 @@
 from prometheus_client import start_http_server
-from prometheus_client.core import CounterMetricFamily, REGISTRY
+from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily, REGISTRY
 
 import json
 import requests
@@ -14,7 +14,7 @@ class HubCollector(object):
       images = os.getenv('IMAGES', default="thebsdbox/ovcli, rucknar/prom-conf").replace(' ','').split(",")
       print("Starting exporter")
       self._pull_metrics = CounterMetricFamily('docker_hub_pull_total', 'counter of docker_pulls from the public API', labels=["image", "user"])
-      self._star_metrics = CounterMetricFamily('docker_hub_star_total', 'counter of docker_stars from the public API', labels=["image", "user"])
+      self._star_metrics = GaugeMetricFamily('docker_hub_star_total', 'gauge of docker_stars from the public API', labels=["image", "user"])
       
       for image in images:
           print("Getting JSON for " + image)
