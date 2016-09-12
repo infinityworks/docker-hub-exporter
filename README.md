@@ -37,14 +37,14 @@ docker-hub-exporter:
 Metrics will be made available on port 9170 by default
 
 ```
-# HELP docker_hub_pull_total counter of docker_pulls from the public API
-# TYPE docker_hub_pull_total counter
-docker_hub_pull_total{image="prometheus",user="prom"} 5391416.0
-docker_hub_pull_total{image="node-exporter",user="prom"} 9790019.0
-# HELP docker_hub_star_total gauge of docker_stars from the public API
-# TYPE docker_hub_star_total gauge
-docker_hub_star_total{image="prometheus",user="prom"} 133.0
-docker_hub_star_total{image="node-exporter",user="prom"} 16.0
+# HELP docker_hub_pulls_total counter of docker_pulls from the public API
+# TYPE docker_hub_pulls_total counter
+docker_hub_pulls_total{image="prometheus",user="prom"} 5476894.0
+docker_hub_pulls_total{image="node-exporter",user="prom"} 10103713.0
+# HELP docker_hub_stars gauge of docker_stars from the public API
+# TYPE docker_hub_stars gauge
+docker_hub_stars{image="prometheus",user="prom"} 136.0
+docker_hub_stars{image="node-exporter",user="prom"} 16.0
 ```
 
 ## Metadata

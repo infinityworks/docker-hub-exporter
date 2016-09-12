@@ -13,8 +13,8 @@ class HubCollector(object):
   def collect(self):
       images = os.getenv('IMAGES', default="thebsdbox/ovcli, rucknar/prom-conf").replace(' ','').split(",")
       print("Starting exporter")
-      self._pull_metrics = CounterMetricFamily('docker_hub_pull_total', 'counter of docker_pulls from the public API', labels=["image", "user"])
-      self._star_metrics = GaugeMetricFamily('docker_hub_star_total', 'gauge of docker_stars from the public API', labels=["image", "user"])
+      self._pull_metrics = CounterMetricFamily('docker_hub_pulls_total', 'counter of docker_pulls from the public API', labels=["image", "user"])
+      self._star_metrics = GaugeMetricFamily('docker_hub_stars', 'gauge of docker_stars from the public API', labels=["image", "user"])
       
       for image in images:
           print("Getting JSON for " + image)
