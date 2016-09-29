@@ -11,7 +11,7 @@ class HubCollector(object):
       self._pull_metrics = CounterMetricFamily('docker_hub_pulls_total', 'counter of docker_pulls from the public API', labels=["image", "user"])
       self._star_metrics = GaugeMetricFamily('docker_hub_stars', 'gauge of docker_stars from the public API', labels=["image", "user"])
       self._is_automated = GaugeMetricFamily('docker_hub_is_automated', 'gauge of is_automated from the public API', labels=["image", "user"])
-      self._last_updated = GaugeMetricFamily('docker_hub_last_updated', 'Unix timestamp of last_updated from the public API', labels=["image", "user"])
+      self._last_updated = GaugeMetricFamily('docker_hub_last_updated_seconds', 'Unix timestamp of last_updated from the public API', labels=["image", "user"])
 
       for image in images:
           print("Getting JSON for " + image)
