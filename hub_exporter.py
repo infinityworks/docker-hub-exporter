@@ -1,49 +1,114 @@
 from prometheus_client import start_http_server
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily, REGISTRY
 
-import json, requests, sys, time, os, datetime, calendar
+import json, requests, sys, time, os, ast, signal, logging, datetime, calendar
 
-class HubCollector(object):
+class GitHubCollector(object):
 
   def collect(self):
-      images = os.getenv('IMAGES', default="thebsdbox/ovcli, rucknar/prom-conf").replace(' ','').split(",")
-      print("Starting exporter")
-      self._pull_metrics = CounterMetricFamily('docker_hub_pulls_total', 'counter of docker_pulls from the public API', labels=["image", "user"])
-      self._star_metrics = GaugeMetricFamily('docker_hub_stars', 'gauge of docker_stars from the public API', labels=["image", "user"])
-      self._is_automated = GaugeMetricFamily('docker_hub_is_automated', 'gauge of is_automated from the public API', labels=["image", "user"])
-      self._last_updated = GaugeMetricFamily('docker_hub_last_updated_seconds', 'Unix timestamp of last_updated from the public API', labels=["image", "user"])
+    if os.getenv('IMAGES'):
+      logging.debug('IMAGES environment variable detected')
+      images = os.getenv('IMAGES').replace(' ','').split(",")
+    if os.getenv('ORGS'):
+      logging.debug('ORGS environment variable detected')
+      orgs = os.getenv('ORGS').replace(' ','').split(",")
 
-      for image in images:
-          print("Getting JSON for " + image)
-          self._get_json(image)
-          print("Getting Metrics for " + image)
-          self._get_metrics()
-          print ("Metrics Updated for " + image)
+    metrics = {'stars': ['star_count', 'GaugeMetricFamily'],
+               'is_automated': ['is_automated', 'GaugeMetricFamily'],
+               'pulls_total': ['pull_count', 'CounterMetricFamily'],
+               'last_updated': ['last_updated', 'GaugeMetricFamily']
+               }
 
-      yield self._pull_metrics
-      yield self._star_metrics
-      yield self._is_automated
-      yield self._last_updated
+    METRIC_PREFIX = 'docker_hub_image'
+    LABELS = ['image', 'user']
+    data = {}
 
-  def _get_json(self, image):
-      print("Getting JSON Payload for " + image)
-      image_url = 'https://hub.docker.com/v2/repositories/{0}'.format(image)
-      print(image_url)
-      response = requests.get(image_url)
-      self._response_json = json.loads(response.content.decode('UTF-8'))
+    # Setup metric counters from prometheus_client.core
+    for metric, field in metrics.items():
+      logging.debug('Creating ' + metric + ' of type ' + field[1])
+      if field[1] == "GaugeMetricFamily":
+        data[metric] = GaugeMetricFamily('%s_%s' % (METRIC_PREFIX, metric), '%s' % metric, value=None, labels=LABELS)
+      elif field[1] == "CounterMetricFamily":
+        data[metric] = CounterMetricFamily('%s_%s' % (METRIC_PREFIX, metric), '%s' % metric, value=None, labels=LABELS)
 
-  def _get_metrics(self):
-      image_name = self._response_json['name']
-      user_name = self._response_json['user']
-      last_updated = datetime.datetime.strptime(self._response_json['last_updated'], "%Y-%m-%dT%H:%M:%S.%fZ")
-      last_updated_timestamp = float(calendar.timegm(last_updated.utctimetuple()))
-      self._pull_metrics.add_metric([image_name, user_name], value=self._response_json['pull_count'])
-      self._star_metrics.add_metric([image_name, user_name], value=self._response_json['star_count'])
-      self._is_automated.add_metric([image_name, user_name], value=self._response_json['is_automated'])
-      self._last_updated.add_metric([image_name, user_name], value=last_updated_timestamp)
+    # loop through specified images and organizations and collect metrics
+    if os.getenv('IMAGES'):
+      self._assemble_image_urls(images)
+      self._collect_image_metrics(data, metrics)
+      logging.debug('Metrics collected for individually specified images')
+
+    if os.getenv('ORGS'):
+      self._assemble_org_urls(orgs)
+      self._collect_org_metrics(data, metrics)
+      logging.debug('Metrics collected for images listed under specified organization')
+
+    # Yield all metrics returned
+    for metric in metrics:
+      yield data[metric]
+      logging.debug('Yield completed for ' + metric)
+
+  def _assemble_image_urls(self, images):
+    self._image_urls = []
+    for image in images:
+      logging.debug(image + ' added to image_url_list array')
+      self._image_urls.extend('https://hub.docker.com/v2/repositories/{0}'.format(image).split(","))
+
+  def _assemble_org_urls(self, orgs):
+    self._org_urls = []
+    for org in orgs:
+      logging.debug(org + ' added to org_url_list array')
+      self._org_urls.extend('https://hub.docker.com/v2/repositories/{0}'.format(org).split(","))
+
+  def _collect_image_metrics(self, data, metrics):
+    for image in self._image_urls:
+      print('Collecting metrics for image:  ' + image)
+      response_json = self._get_json(image)
+      self._convert_to_timestamps(response_json)
+      self._add_metrics(data, metrics, response_json)
+      logging.debug('Collection of individual image metrics completed')
+
+  def _collect_org_metrics(self, data, metrics):
+    for org_url in self._org_urls:
+      full_content = []
+      page_ref = org_url
+      while True:
+        page_content = self._get_json(page_ref)
+        full_content = full_content + page_content['results']
+        if page_content['next']:
+          page_ref = page_content['next']
+        else:
+          break
+      logging.debug("full_content assembled")
+      for image in full_content:
+        updated_image = self._convert_to_timestamps(image)
+        self._add_metrics(data, metrics, updated_image)
+        print("Adding metrics for" + updated_image['name'])
+
+  def _get_json(self, url):
+    logging.debug("Getting JSON Payload for " + url)
+    response = requests.get(url)
+    response_json = json.loads(response.content.decode('UTF-8'))
+    return response_json
+
+  def _convert_to_timestamps(self, response_json):
+    last_updated_pre_conversion = datetime.datetime.strptime(response_json['last_updated'], "%Y-%m-%dT%H:%M:%S.%fZ")
+    response_json['last_updated'] = float(calendar.timegm(last_updated_pre_conversion.utctimetuple()))
+    return response_json
+
+  def _add_metrics(self, data, metrics, response_json):
+    for metric, field in metrics.items():
+      data[metric].add_metric([response_json['name'], response_json['user']], value=response_json[field[0]])
+
+def sigterm_handler(_signo, _stack_frame):
+  sys.exit(0)
 
 if __name__ == '__main__':
+  # Ensure we have something to export
+  if not (os.getenv('IMAGES') or os.getenv('ORGS')):
+    print("No Images or organizations specified, exiting")
+    exit(1)
   start_http_server(int(os.getenv('BIND_PORT')))
-  REGISTRY.register(HubCollector())
-
-  while True: time.sleep(1)
+  REGISTRY.register(GitHubCollector())
+  
+  signal.signal(signal.SIGTERM, sigterm_handler)
+  while True: time.sleep(int(os.getenv('INTERVAL')))
