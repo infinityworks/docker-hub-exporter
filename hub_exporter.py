@@ -6,12 +6,6 @@ import json, requests, sys, time, os, ast, signal, logging, datetime, calendar
 class GitHubCollector(object):
 
   def collect(self):
-    if os.getenv('IMAGES'):
-      logging.debug('IMAGES environment variable detected')
-      images = os.getenv('IMAGES').replace(' ','').split(",")
-    if os.getenv('ORGS'):
-      logging.debug('ORGS environment variable detected')
-      orgs = os.getenv('ORGS').replace(' ','').split(",")
 
     metrics = {'stars': ['star_count', 'GaugeMetricFamily'],
                'is_automated': ['is_automated', 'GaugeMetricFamily'],
@@ -25,7 +19,6 @@ class GitHubCollector(object):
 
     # Setup metric counters from prometheus_client.core
     for metric, field in metrics.items():
-      logging.debug('Creating ' + metric + ' of type ' + field[1])
       if field[1] == "GaugeMetricFamily":
         data[metric] = GaugeMetricFamily('%s_%s' % (METRIC_PREFIX, metric), '%s' % metric, value=None, labels=LABELS)
       elif field[1] == "CounterMetricFamily":
@@ -33,31 +26,22 @@ class GitHubCollector(object):
 
     # loop through specified images and organizations and collect metrics
     if os.getenv('IMAGES'):
-      self._assemble_image_urls(images)
+      images = os.getenv('IMAGES').replace(' ','').split(",")
+      self._image_urls = []
+      for image in images:
+        self._image_urls.extend('https://hub.docker.com/v2/repositories/{0}'.format(image).split(","))
       self._collect_image_metrics(data, metrics)
-      logging.debug('Metrics collected for individually specified images')
 
     if os.getenv('ORGS'):
-      self._assemble_org_urls(orgs)
+      orgs = os.getenv('ORGS').replace(' ','').split(",")
+      self._org_urls = []
+      for org in orgs:
+        self._org_urls.extend('https://hub.docker.com/v2/repositories/{0}'.format(org).split(","))
       self._collect_org_metrics(data, metrics)
-      logging.debug('Metrics collected for images listed under specified organization')
 
     # Yield all metrics returned
     for metric in metrics:
       yield data[metric]
-      logging.debug('Yield completed for ' + metric)
-
-  def _assemble_image_urls(self, images):
-    self._image_urls = []
-    for image in images:
-      logging.debug(image + ' added to image_url_list array')
-      self._image_urls.extend('https://hub.docker.com/v2/repositories/{0}'.format(image).split(","))
-
-  def _assemble_org_urls(self, orgs):
-    self._org_urls = []
-    for org in orgs:
-      logging.debug(org + ' added to org_url_list array')
-      self._org_urls.extend('https://hub.docker.com/v2/repositories/{0}'.format(org).split(","))
 
   def _collect_image_metrics(self, data, metrics):
     for image in self._image_urls:
@@ -65,7 +49,6 @@ class GitHubCollector(object):
       response_json = self._get_json(image)
       self._convert_to_timestamps(response_json)
       self._add_metrics(data, metrics, response_json)
-      logging.debug('Collection of individual image metrics completed')
 
   def _collect_org_metrics(self, data, metrics):
     for org_url in self._org_urls:
@@ -78,14 +61,12 @@ class GitHubCollector(object):
           page_ref = page_content['next']
         else:
           break
-      logging.debug("full_content assembled")
       for image in full_content:
         updated_image = self._convert_to_timestamps(image)
         self._add_metrics(data, metrics, updated_image)
         print("Adding metrics for" + updated_image['name'])
 
   def _get_json(self, url):
-    logging.debug("Getting JSON Payload for " + url)
     response = requests.get(url)
     response_json = json.loads(response.content.decode('UTF-8'))
     return response_json
@@ -111,4 +92,4 @@ if __name__ == '__main__':
   REGISTRY.register(GitHubCollector())
   
   signal.signal(signal.SIGTERM, sigterm_handler)
-  while True: time.sleep(int(os.getenv('INTERVAL')))
+  while True: time.sleep(1)
