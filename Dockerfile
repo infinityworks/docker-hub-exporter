@@ -19,4 +19,6 @@ RUN addgroup exporter \
 
 COPY --from=builder /go/src/github.com/infinityworksltd/docker-hub-exporter/app .
 
+USER exporter
+
 ENTRYPOINT ["/app"]
