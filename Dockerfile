@@ -13,6 +13,8 @@ RUN go get \
 
 FROM alpine
 
+EXPOSE 9171
+
 RUN addgroup exporter \
      && adduser -S -G exporter exporter \
      && apk --update --no-cache add ca-certificates

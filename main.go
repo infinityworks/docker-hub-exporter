@@ -15,7 +15,7 @@ import (
 
 func main() {
 	var (
-		listenAddress = flag.String("listen-address", ":8080", "Address on which to expose metrics and web interface.")
+		listenAddress = flag.String("listen-address", ":9171", "Address on which to expose metrics and web interface.")
 		metricsPath   = flag.String("telemetry-path", "/metrics", "Path under which to expose metrics.")
 		organisations = flag.String("organisations", "", "Organisations/Users you wish to monitor: expected format 'org1,org2'")
 		images        = flag.String("images", "", "Images you wish to monitor: expected format 'user/image1,user/image2'")
