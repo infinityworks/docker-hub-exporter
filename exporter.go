@@ -1,4 +1,4 @@
-package exporter
+package docker_hub_exporter
 
 import (
 	"encoding/json"

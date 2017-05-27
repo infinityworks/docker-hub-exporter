@@ -9,7 +9,7 @@ import (
 
 	"time"
 
-	"github.com/infinityworksltd/docker-hub-exporter/exporter"
+	exporter "github.com/infinityworksltd/docker-hub-exporter"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
