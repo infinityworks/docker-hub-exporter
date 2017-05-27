@@ -11,6 +11,7 @@ import (
 
 	exporter "github.com/infinityworksltd/docker-hub-exporter"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 	log.Println("Starting Docker Hub Exporter")
 	log.Printf("Listening on: %s", *listenAddress)
 
-	exporter := exporter.New(
+	e := exporter.New(
 		strings.Split(*organisations, ","),
 		strings.Split(*images, ","),
 		exporter.WithLogger(log.New(os.Stdout, "docker_hub_exporter: ", log.LstdFlags)),
@@ -39,16 +40,16 @@ func main() {
 
 	// Register Metrics from each of the endpoints
 	// This invokes the Collect method through the prometheus client libraries.
-	prometheus.MustRegister(*exporter)
+	prometheus.MustRegister(*e)
 
 	// Setup HTTP handler
-	http.Handle(*metricsPath, prometheus.Handler())
+	http.Handle(*metricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
 		                <head><title>Docker Hub Exporter</title></head>
 		                <body>
 		                   <h1>Docker Hub Prometheus Metrics Exporter</h1>
-						   <p>For more information, visit <a href=https://github.com/infinityworksltd/docker-hub-exporter>GitHub</a></p>
+				   <p>For more information, visit <a href='https://github.com/infinityworksltd/docker-hub-exporter'>GitHub</a></p>
 		                   <p><a href='` + *metricsPath + `'>Metrics</a></p>
 		                   </body>
 		                </html>
