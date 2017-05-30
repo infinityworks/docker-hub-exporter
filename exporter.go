@@ -2,13 +2,13 @@ package docker_hub_exporter
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
-
-	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -114,10 +114,6 @@ func (e Exporter) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (e Exporter) collectMetrics(ch chan<- prometheus.Metric) {
-	// Build API urls for querying data
-	errors := make(chan error, 1)
-	finished := make(chan bool, 1)
-
 	wg := sync.WaitGroup{}
 	wg.Add(len(e.organisations) + len(e.images))
 
@@ -127,7 +123,7 @@ func (e Exporter) collectMetrics(ch chan<- prometheus.Metric) {
 				response, err := e.getOrgMetrics(fmt.Sprintf("%s%s", e.baseURL, url))
 
 				if err != nil {
-					errors <- err
+					e.logger.Println("error ", err)
 					wg.Done()
 					return
 				}
@@ -140,7 +136,7 @@ func (e Exporter) collectMetrics(ch chan<- prometheus.Metric) {
 			}
 
 			wg.Done()
-		}(url)
+		}(strings.TrimSpace(url))
 	}
 
 	for _, url := range e.images {
@@ -149,7 +145,7 @@ func (e Exporter) collectMetrics(ch chan<- prometheus.Metric) {
 				response, err := e.getImageMetrics(fmt.Sprintf("%s%s", e.baseURL, url))
 
 				if err != nil {
-					errors <- err
+					e.logger.Println("error ", err)
 					wg.Done()
 					return
 				}
@@ -158,22 +154,10 @@ func (e Exporter) collectMetrics(ch chan<- prometheus.Metric) {
 			}
 
 			wg.Done()
-		}(url)
+		}(strings.TrimSpace(url))
 	}
 
-	go func() {
-		wg.Wait()
-		close(finished)
-	}()
-
-	select {
-	case <-finished:
-	case err := <-errors:
-		if err != nil {
-			e.logger.Println("error ", err)
-			return
-		}
-	}
+	wg.Wait()
 }
 
 func (e Exporter) processImageResult(result ImageResult, ch chan<- prometheus.Metric) {
@@ -223,7 +207,7 @@ func (e Exporter) getOrgMetrics(url string) ([]OrganisationResult, error) {
 		return []OrganisationResult{}, fmt.Errorf("Error unmarshalling response: %v", err)
 	}
 
-	if orgResult.Count == 0 {
+	if orgResult.Count == 0 || len(orgResult.Results) == 0 {
 		return []OrganisationResult{}, fmt.Errorf("No images found for url: %s", url)
 	}
 
