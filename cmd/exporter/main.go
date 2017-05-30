@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
 	"time"
 
 	exporter "github.com/infinityworksltd/docker-hub-exporter"
@@ -16,24 +15,46 @@ import (
 
 func main() {
 	var (
-		listenAddress = flag.String("listen-address", ":9171", "Address on which to expose metrics and web interface.")
+		listenAddress = flag.String("listen-address", ":9170", "Address on which to expose metrics and web interface.")
 		metricsPath   = flag.String("telemetry-path", "/metrics", "Path under which to expose metrics.")
-		organisations = flag.String("organisations", "", "Organisations/Users you wish to monitor: expected format 'org1,org2'")
-		images        = flag.String("images", "", "Images you wish to monitor: expected format 'user/image1,user/image2'")
+		flagOrgs      = flag.String("organisations", "", "Organisations/Users you wish to monitor: expected format 'org1,org2'")
+		flagImages    = flag.String("images", "", "Images you wish to monitor: expected format 'user/image1,user/image2'")
 	)
+
+	var organisations []string
+	var images []string
+
+	envBind := os.Getenv("BIND_PORT")
+	envOrgs := os.Getenv("ORGS")
+	envImages := os.Getenv("IMAGES")
 
 	flag.Parse()
 
-	if *organisations == "" && *images == "" {
+	if *flagOrgs == "" && envOrgs == "" && *flagImages == "" && envImages == "" {
 		log.Fatal("No organisations or images provided")
+	}
+
+	if envBind != "" {
+		listenAddress = &envBind
+	}
+
+	organisations = append(organisations, strings.Split(*flagOrgs, ",")...)
+	images = append(images, strings.Split(*flagImages, ",")...)
+
+	if envOrgs != "" {
+		organisations = append(organisations, strings.Split(envOrgs, ",")...)
+	}
+
+	if envImages != "" {
+		images = append(images, strings.Split(envImages, ",")...)
 	}
 
 	log.Println("Starting Docker Hub Exporter")
 	log.Printf("Listening on: %s", *listenAddress)
 
 	e := exporter.New(
-		strings.Split(*organisations, ","),
-		strings.Split(*images, ","),
+		organisations,
+		images,
 		exporter.WithLogger(log.New(os.Stdout, "docker_hub_exporter: ", log.LstdFlags)),
 		exporter.WithTimeout(time.Second*1),
 	)
