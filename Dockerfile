@@ -13,7 +13,7 @@ RUN go get \
 
 FROM alpine
 
-EXPOSE 9171
+EXPOSE 9170
 
 RUN addgroup exporter \
      && adduser -S -G exporter exporter \

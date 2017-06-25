@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"fmt"
+
 	exporter "github.com/infinityworksltd/docker-hub-exporter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -47,6 +49,10 @@ func main() {
 
 	if envImages != "" {
 		images = append(images, strings.Split(envImages, ",")...)
+	}
+
+	if strings.HasPrefix(*listenAddress, ":") != true {
+		*listenAddress = fmt.Sprintf(":%s", *listenAddress)
 	}
 
 	log.Println("Starting Docker Hub Exporter")
