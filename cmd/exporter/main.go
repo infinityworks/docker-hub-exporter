@@ -10,7 +10,7 @@ import (
 
 	"fmt"
 
-	exporter "github.com/infinityworksltd/docker-hub-exporter"
+	exporter "github.com/infinityworks/docker-hub-exporter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -76,7 +76,7 @@ func main() {
 		                <head><title>Docker Hub Exporter</title></head>
 		                <body>
 		                   <h1>Docker Hub Prometheus Metrics Exporter</h1>
-				   <p>For more information, visit <a href='https://github.com/infinityworksltd/docker-hub-exporter'>GitHub</a></p>
+				   <p>For more information, visit <a href='https://github.com/infinityworks/docker-hub-exporter'>GitHub</a></p>
 		                   <p><a href='` + *metricsPath + `'>Metrics</a></p>
 		                   </body>
 		                </html>
