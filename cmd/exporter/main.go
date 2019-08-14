@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"strconv"
 
 	"fmt"
 
@@ -17,18 +18,20 @@ import (
 
 func main() {
 	var (
-		listenAddress = flag.String("listen-address", ":9170", "Address on which to expose metrics and web interface.")
-		metricsPath   = flag.String("telemetry-path", "/metrics", "Path under which to expose metrics.")
-		flagOrgs      = flag.String("organisations", "", "Organisations/Users you wish to monitor: expected format 'org1,org2'")
-		flagImages    = flag.String("images", "", "Images you wish to monitor: expected format 'user/image1,user/image2'")
+		listenAddress     = flag.String("listen-address", ":9170", "Address on which to expose metrics and web interface.")
+		metricsPath       = flag.String("telemetry-path", "/metrics", "Path under which to expose metrics.")
+		flagOrgs          = flag.String("organisations", "", "Organisations/Users you wish to monitor: expected format 'org1,org2'")
+		flagImages        = flag.String("images", "", "Images you wish to monitor: expected format 'user/image1,user/image2'")
+		connectionRetries = flag.Int("connection-retries", 3, "Connection retries until failure is raised. ")
 	)
 
 	var organisations []string
 	var images []string
-
+	
 	envBind := os.Getenv("BIND_PORT")
 	envOrgs := os.Getenv("ORGS")
 	envImages := os.Getenv("IMAGES")
+	envConnectionRetries := os.Getenv("CONNECTION_RETRIES")
 
 	flag.Parse()
 
@@ -38,6 +41,15 @@ func main() {
 
 	if envBind != "" {
 		listenAddress = &envBind
+	}
+
+	if envConnectionRetries != "" {
+		var err error
+		*connectionRetries, err = strconv.Atoi(envConnectionRetries)
+
+		if err != nil {
+			log.Fatal("Invalid amount of connection-retries")
+		}
 	}
 
 	organisations = append(organisations, strings.Split(*flagOrgs, ",")...)
@@ -61,6 +73,7 @@ func main() {
 	e := exporter.New(
 		organisations,
 		images,
+		*connectionRetries,
 		exporter.WithLogger(log.New(os.Stdout, "docker_hub_exporter: ", log.LstdFlags)),
 		exporter.WithTimeout(time.Second*1),
 	)

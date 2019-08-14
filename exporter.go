@@ -41,11 +41,12 @@ var (
 
 // Exporter is used to store Metrics data
 type Exporter struct {
-	timeout       time.Duration
-	baseURL       string
-	organisations []string
-	images        []string
-	logger        *log.Logger
+	timeout           time.Duration
+	baseURL           string
+	organisations     []string
+	images            []string
+	logger            *log.Logger
+	connectionRetries int
 }
 
 type OrganisationResult struct {
@@ -65,13 +66,14 @@ type ImageResult struct {
 }
 
 // New creates a new Exporter and returns it
-func New(organisations, images []string, opts ...Option) *Exporter {
+func New(organisations, images []string, connectionRetries int, opts ...Option) *Exporter {
 	e := &Exporter{
-		timeout:       time.Second * 5,
-		baseURL:       "https://hub.docker.com/v2/repositories/",
-		organisations: organisations,
-		images:        images,
-		logger:        log.New(ioutil.Discard, "docker_hub_exporter: ", log.LstdFlags),
+		timeout:       	   time.Second * 5,
+		baseURL:           "https://hub.docker.com/v2/repositories/",
+		organisations:     organisations,
+		images:            images,
+		logger:            log.New(ioutil.Discard, "docker_hub_exporter: ", log.LstdFlags),
+		connectionRetries: connectionRetries,
 	}
 
 	for _, opt := range opts {
@@ -248,6 +250,7 @@ func (e Exporter) getResponse(url string) ([]byte, error) {
 
 // getHTTPResponse handles the http client creation, token setting and returns the *http.response
 func (e Exporter) getHTTPResponse(url string) (*http.Response, error) {
+	
 	client := &http.Client{
 		Timeout: e.timeout,
 	}
@@ -258,11 +261,20 @@ func (e Exporter) getHTTPResponse(url string) (*http.Response, error) {
 		return nil, fmt.Errorf("Failed to create http request: %v", err)
 	}
 
-	resp, err := client.Do(req)
+	var retries = e.connectionRetries
+	for retries > 0 {
+		resp, err := client.Do(req)
+		if err != nil {
+			retries -= 1
 
-	if err != nil {
-		return nil, err
+			if retries == 0 {
+				return nil, err
+			} else {
+				e.logger.Printf("Retrying HTTP request %s", url)
+			}
+		} else {
+			return resp, nil
+		}
 	}
-
-	return resp, nil
+	return nil, nil
 }
