@@ -23,6 +23,7 @@ func main() {
 		flagOrgs          = flag.String("organisations", "", "Organisations/Users you wish to monitor: expected format 'org1,org2'")
 		flagImages        = flag.String("images", "", "Images you wish to monitor: expected format 'user/image1,user/image2'")
 		connectionRetries = flag.Int("connection-retries", 3, "Connection retries until failure is raised. ")
+		connectionTimeout = flag.Int("connection-timeout", 5, "Connection timeout in seconds. ")
 	)
 
 	var organisations []string
@@ -32,6 +33,7 @@ func main() {
 	envOrgs := os.Getenv("ORGS")
 	envImages := os.Getenv("IMAGES")
 	envConnectionRetries := os.Getenv("CONNECTION_RETRIES")
+	envConnectionTimeout := os.Getenv("CONNECTION_TIMEOUT")
 
 	flag.Parse()
 
@@ -48,7 +50,16 @@ func main() {
 		*connectionRetries, err = strconv.Atoi(envConnectionRetries)
 
 		if err != nil {
-			log.Fatal("Invalid amount of connection-retries")
+			log.Fatal("Invalid value for connection-retries")
+		}
+	}
+
+	if envConnectionTimeout != "" {
+		var err error
+		*connectionTimeout, err = strconv.Atoi(envConnectionTimeout)
+
+		if err != nil {
+			log.Fatal("Invalid value for connection-timeout")
 		}
 	}
 
@@ -75,7 +86,7 @@ func main() {
 		images,
 		*connectionRetries,
 		exporter.WithLogger(log.New(os.Stdout, "docker_hub_exporter: ", log.LstdFlags)),
-		exporter.WithTimeout(time.Second*1),
+		exporter.WithTimeout(time.Second*time.Duration(*connectionTimeout)),
 	)
 
 	// Register Metrics from each of the endpoints
