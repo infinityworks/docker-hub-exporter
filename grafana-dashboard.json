@@ -156,7 +156,7 @@
           ],
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
-          "pattern": "user",
+          "pattern": "namespace",
           "thresholds": [],
           "type": "string",
           "unit": "short"
