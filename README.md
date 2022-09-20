@@ -2,6 +2,10 @@
 
 Exposes metrics of container pulls and stars from the Docker Hub API, to a Prometheus compatible endpoint. The exporter is capable of pulling down stats for individual images, or for orgs or users from DockerHub. This is based on the un-documented V2 Docker Hub API.
 
+```
+!!! This repository is now deprecated, feel free to fork !!!
+```
+
 ## Configuration
 
 The image is setup to take parameters from environment variables or flags:
