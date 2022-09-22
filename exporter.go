@@ -20,22 +20,22 @@ var (
 	dockerHubImageLastUpdated = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "last_updated"),
 		"docker_hub_exporter: Docker Image Last Updated",
-		[]string{"image", "user"}, nil,
+		[]string{"image", "user", "namespace"}, nil,
 	)
 	dockerHubImagePullsTotal = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "pulls_total"),
 		"docker_hub_exporter: Docker Image Pulls Total.",
-		[]string{"image", "user"}, nil,
+		[]string{"image", "user", "namespace"}, nil,
 	)
 	dockerHubImageStars = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "stars"),
 		"docker_hub_exporter: Docker Image Stars.",
-		[]string{"image", "user"}, nil,
+		[]string{"image", "user", "namespace"}, nil,
 	)
 	dockerHubImageIsAutomated = prometheus.NewDesc(
 		prometheus.BuildFQName(Namespace, "", "is_automated"),
 		"docker_hub_exporter: Docker Image Is Automated.",
-		[]string{"image", "user"}, nil,
+		[]string{"image", "user", "namespace"}, nil,
 	)
 )
 
@@ -58,7 +58,7 @@ type OrganisationResult struct {
 
 type ImageResult struct {
 	Name        string    `json:"name"`
-	User        string    `json:"user"`
+	Namespace   string    `json:"namespace"`
 	StarCount   float64   `json:"star_count"`
 	IsAutomated bool      `json:"is_automated"`
 	PullCount   float64   `json:"pull_count"`
@@ -68,7 +68,7 @@ type ImageResult struct {
 // New creates a new Exporter and returns it
 func New(organisations, images []string, connectionRetries int, opts ...Option) *Exporter {
 	e := &Exporter{
-		timeout:       	   time.Second * 5,
+		timeout:           time.Second * 5,
 		baseURL:           "https://hub.docker.com/v2/repositories/",
 		organisations:     organisations,
 		images:            images,
@@ -163,7 +163,7 @@ func (e Exporter) collectMetrics(ch chan<- prometheus.Metric) {
 }
 
 func (e Exporter) processImageResult(result ImageResult, ch chan<- prometheus.Metric) {
-	if result.Name != "" && result.User != "" {
+	if result.Name != "" && result.Namespace != "" {
 		var isAutomated float64
 		if result.IsAutomated {
 			isAutomated = float64(1)
@@ -173,10 +173,10 @@ func (e Exporter) processImageResult(result ImageResult, ch chan<- prometheus.Me
 
 		lastUpdated := float64(result.LastUpdated.UnixNano()) / 1e9
 
-		ch <- prometheus.MustNewConstMetric(dockerHubImageStars, prometheus.GaugeValue, result.StarCount, result.Name, result.User)
-		ch <- prometheus.MustNewConstMetric(dockerHubImageIsAutomated, prometheus.GaugeValue, isAutomated, result.Name, result.User)
-		ch <- prometheus.MustNewConstMetric(dockerHubImagePullsTotal, prometheus.CounterValue, result.PullCount, result.Name, result.User)
-		ch <- prometheus.MustNewConstMetric(dockerHubImageLastUpdated, prometheus.GaugeValue, lastUpdated, result.Name, result.User)
+		ch <- prometheus.MustNewConstMetric(dockerHubImageStars, prometheus.GaugeValue, result.StarCount, result.Name, result.Namespace, result.Namespace)
+		ch <- prometheus.MustNewConstMetric(dockerHubImageIsAutomated, prometheus.GaugeValue, isAutomated, result.Name, result.Namespace, result.Namespace)
+		ch <- prometheus.MustNewConstMetric(dockerHubImagePullsTotal, prometheus.CounterValue, result.PullCount, result.Name, result.Namespace, result.Namespace)
+		ch <- prometheus.MustNewConstMetric(dockerHubImageLastUpdated, prometheus.GaugeValue, lastUpdated, result.Name, result.Namespace, result.Namespace)
 	}
 }
 
@@ -250,7 +250,7 @@ func (e Exporter) getResponse(url string) ([]byte, error) {
 
 // getHTTPResponse handles the http client creation, token setting and returns the *http.response
 func (e Exporter) getHTTPResponse(url string) (*http.Response, error) {
-	
+
 	client := &http.Client{
 		Timeout: e.timeout,
 	}
